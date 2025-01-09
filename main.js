@@ -180,7 +180,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
 
     this.activeFile = this.app.workspace.getActiveFile();
     if (!this.activeFile) {
-      console.warn("You haven't open a document!");
+      new Notice("You haven't open a document!");
       return;
     }
     let disableModal = false;
