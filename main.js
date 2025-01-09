@@ -170,7 +170,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
       downloadedPathsMap
     );
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (view && view.editor.hasFocus()) {
+    if (view && view.editor.hasFocus()) {   // 编辑器打开的情况下不要直接修改文件，否则输入Referer后按回车确认时，会导致文档开头多一个回车
       view.editor.setValue(updatedContent);
     } else {
       await this.app.vault.modify(this.activeFile, updatedContent);
