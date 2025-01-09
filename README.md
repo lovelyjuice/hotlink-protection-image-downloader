@@ -7,5 +7,8 @@ Obsidian没有官方的剪藏插件，对于有防盗链的网站，比如少数
 如果笔记的属性（properties）中存在以http开头的值，则将其作为Referer，这时不会弹框要求用户输入Referer。
 如果属性中没有，插件会去笔记的前200个字符中寻找第一个以http开头的URL，但是可能会出现识别不准确的情况，所以会弹窗要求用户确认。
 
+## 用法
+打开一篇文档，Ctrl+P 输入 hotlink
+
 ## 注意事项
 因为用了node.js的几个内置库，比如https, 所以在移动端是用不了的。这个缺点无法避免，因为浏览器的安全策略不允许修改Referer，js内置的fetch函数和obsidian的requestUrl API均无法绕过这个安全限制。

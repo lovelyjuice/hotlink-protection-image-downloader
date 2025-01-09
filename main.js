@@ -135,7 +135,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
         recursive: true,
       });
       console.log(
-        "Directory created: ",
+        "Download to ",
         path.join(this.app.vault.adapter.basePath, downloadDir)
       );
     } catch (err) {
@@ -155,6 +155,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
         console.error(
           `Download failed: ${url}, error message: ${error.message}`
         );
+        new Notice('Can not download some images. You can retry it, or press Ctrl+Shift+I to view the error log')
       }
     }
 
@@ -248,6 +249,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
         headers: {
           Referer: encodeURI(referer),
         },
+        // rejectUnauthorized: false    //默认情况下不信任安装在“受信任的根证书颁发机构”中的自签名证书，调试时需禁用https证书校验，否则抓包时会出现“self signed certificate in certificate chain”错误
       };
     }
 
@@ -274,6 +276,9 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
             heif: ".heif",
           };
           const type = contentType.split("/")[1];
+          if (contentType.split("/")[0] === "text"){
+            new Notice("Remote resource is not image, please check your Referer.");
+          }
           if (typeMap[type]) {
             extension = typeMap[type];
           } else {
@@ -284,6 +289,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
               url
             );
             reject(new Error("Unsupported file type: " + contentType));
+            new Notice("Unsupported file type: " + contentType);
             return;
           }
 
@@ -295,9 +301,12 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
             const buffer = Buffer.concat(data);
             console.debug(`Image file size: ${buffer.length} bytes`);
 
+            if(extension !==".svg" && buffer.length < 1024){
+              console.error("The image size is too small, it seems that downloaded content is not a image.")
+            }
             // 生成随机文件名
             const timestamp = Date.now();
-            const randomNum = Math.floor(100 + Math.random() * 900); // 生成3位随机数
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
             const fileName = `${timestamp}-${randomNum}${extension}`;
             const filePath = `${path}/${fileName}`;
 
