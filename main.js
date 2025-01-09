@@ -4,7 +4,7 @@ const {
   Notice,
   PluginSettingTab,
   Setting,
-  FileSystemAdapter
+  FileSystemAdapter,
 } = require("obsidian");
 const https = require("https");
 const path = require("path");
@@ -74,7 +74,7 @@ class RefererModal extends Modal {
       const referer = input.value;
       if (!referer) {
         alert("Referer cannot be empty!");
-        return; // If user did not input Referer, exit function
+        return;
       }
       this.callback(referer);
       this.close();
@@ -82,7 +82,7 @@ class RefererModal extends Modal {
 
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
-        confirmButton.click(); // 按下 Enter 键时触发确认按钮。这里有bug，会导致编辑器也收到Enter按键事件从而导致文档开头会多一个回车
+        confirmButton.click(); // 按下 Enter 键时触发确认按钮。这里有bug，会导致markdown编辑器也收到Enter按键事件从而导致文档开头会多一个回车
       }
     });
   }
@@ -131,9 +131,12 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     const downloadedPathsMap = new Map(); // 用于存储下载的文件路径
     // 检查并创建目录
     try {
-      await FileSystemAdapter.mkdir(path.join(this.app.vault.adapter.basePath, downloadDir), {
-        recursive: true,
-      });
+      await FileSystemAdapter.mkdir(
+        path.join(this.app.vault.adapter.basePath, downloadDir),
+        {
+          recursive: true,
+        }
+      );
       console.log(
         "Download to ",
         path.join(this.app.vault.adapter.basePath, downloadDir)
@@ -155,7 +158,9 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
         console.error(
           `Download failed: ${url}, error message: ${error.message}`
         );
-        new Notice('Can not download some images. You can retry it, or press Ctrl+Shift+I to view the error log')
+        new Notice(
+          "Can not download some images. You can retry it, or press Ctrl+Shift+I to view the error log"
+        );
       }
     }
 
@@ -185,7 +190,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
       for (const key in frontmatter) {
         if (
           typeof frontmatter[key] === "string" &&
-          frontmatter[key].startsWith("http")
+          frontmatter[key].toLowerCase().startsWith("http")
         ) {
           console.log(
             `Found Referer from properties of document. ${key}: ${frontmatter[key]}`
@@ -241,7 +246,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     return urls;
   }
 
-  async downloadImage(url, path, referer) {
+  async downloadImage(url, dirPath, referer) {
     console.debug("Start downloading image:", url);
     let options = {};
     if (referer) {
@@ -276,8 +281,10 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
             heif: ".heif",
           };
           const type = contentType.split("/")[1];
-          if (contentType.split("/")[0] === "text"){
-            new Notice("Remote resource is not image, please check your Referer.");
+          if (contentType.split("/")[0] === "text") {
+            new Notice(
+              "Remote resource is not image, please check your Referer."
+            );
           }
           if (typeMap[type]) {
             extension = typeMap[type];
@@ -301,15 +308,25 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
             const buffer = Buffer.concat(data);
             console.debug(`Image file size: ${buffer.length} bytes`);
 
-            if(extension !==".svg" && buffer.length < 1024){
-              console.error("The image size is too small, it seems that downloaded content is not a image.")
+            if (extension !== ".svg" && buffer.length < 1024) {
+              console.error(
+                "The image size is too small, it seems that downloaded content is not a image."
+              );
             }
             // 生成随机文件名
-            const timestamp = Date.now();
-            const randomNum = Math.floor(1000 + Math.random() * 9000);
-            const fileName = `${timestamp}-${randomNum}${extension}`;
-            const filePath = `${path}/${fileName}`;
-
+            let filePath;
+            let fileName;
+            // const fileSystemAdapter = this.vault.adapter
+            do {
+              const timestamp = Math.floor(Date.now() / 1000);
+              const chars = "abcdefghijklmnopqrstuvwxyz0123456789".split("");
+              const randomStr = Array(5)
+                .fill(0)
+                .map(() => chars[Math.floor(Math.random() * chars.length)])
+                .join("");
+              fileName = `${timestamp}_${randomStr}${extension}`;
+              filePath = `${dirPath}/${fileName}`;
+            } while (await this.app.vault.adapter.exists(filePath));
             await this.app.vault.createBinary(filePath, buffer);
             resolve(fileName);
           });

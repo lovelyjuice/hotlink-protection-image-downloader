@@ -1,14 +1,16 @@
-# Hotlink Protection Image Downloader(防盗链图片下载)
-Obsidian没有官方的剪藏插件，对于有防盗链的网站，比如少数派，从网页复制过来的文章无法显示图片。除此之外，我还看到不少网友使用的“图床”突然开启了防盗链导致原有的笔记无法正常阅读，因此诞生了这个插件。虽然我以前没写过obsidian的插件，也不太熟悉js，好在靠着大模型以及一些东拼西凑的知识写出来了这个插件。
+[中文简介](README_CN.md)
 
-## 有什么用
-功能非常简单，识别笔记中的URL或者用户手动输入URL作为Referer，下载图片到本地，然后替换图片的链接为本地图片的路径。下载的图片会保存在obsidian默认的附件文件夹里面，和直接复制网页中的图片再贴进去是一样的效果。
+# Hotlink Protection Image Downloader
+Obsidian does not have an official clipping plugin. For websites with anti-leech protection, such as ShaoNv Pai, images from web pages copied into articles cannot be displayed. Additionally, I have seen many users' "image beds" suddenly enabling anti-leech, causing existing notes to be unreadable. Therefore, this plugin was born. Although I have never written an Obsidian plugin before and am not very familiar with JavaScript, I managed to write this plugin with the help of large language models and some pieced-together knowledge.
 
-如果笔记的属性（properties）中存在以http开头的值，则将其作为Referer，这时不会弹框要求用户输入Referer。
-如果属性中没有，插件会去笔记的前200个字符中寻找第一个以http开头的URL，但是可能会出现识别不准确的情况，所以会弹窗要求用户确认。
+## What is it for
+The functionality is very simple. It identifies URLs in the note or allows the user to manually input a URL as the Referer, downloads the image to the local machine, and then replaces the image link with the local image path. The downloaded images will be saved in Obsidian's default attachment folder, just like directly copying images from a web page and pasting them in.
 
-## 用法
-打开一篇文档，Ctrl+P 输入 hotlink
+If the note's properties contain a value starting with "http", it will be used as the Referer, and no popup will be required to ask the user to input the Referer.
+If there is no such property, the plugin will look for the first URL starting with http in the first 200 characters of the note. However, this may not be accurate, so a popup will be required to confirm.
 
-## 注意事项
-因为用了node.js的几个内置库，比如https, 所以在移动端是用不了的。这个缺点无法避免，因为浏览器的安全策略不允许修改Referer，js内置的fetch函数和obsidian的requestUrl API均无法绕过这个安全限制。
+## How to Use
+Open a document, press Ctrl+P and type hotlink
+
+## Notes
+Since several built-in libraries of node.js, such as https, are used, this plugin cannot be used on mobile devices. This drawback cannot be avoided because the browser's security policy does not allow the modification of the Referer. The built-in fetch function of js and the requestUrl API of Obsidian cannot bypass this security restriction.
