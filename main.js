@@ -5,6 +5,7 @@ const {
   PluginSettingTab,
   Setting,
   FileSystemAdapter,
+  MarkdownView,
 } = require("obsidian");
 const https = require("https");
 const path = require("path");
@@ -82,7 +83,7 @@ class RefererModal extends Modal {
 
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
-        confirmButton.click(); // 按下 Enter 键时触发确认按钮。这里有bug，会导致markdown编辑器也收到Enter按键事件从而导致文档开头会多一个回车
+        confirmButton.click();
       }
     });
   }
@@ -137,7 +138,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
           recursive: true,
         }
       );
-      console.log(
+      console.debug(
         "Download to ",
         path.join(this.app.vault.adapter.basePath, downloadDir)
       );
@@ -168,7 +169,12 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
       this.content,
       downloadedPathsMap
     );
-    await this.app.vault.modify(this.activeFile, updatedContent);
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view && view.editor.hasFocus()) {
+      view.editor.setValue(updatedContent);
+    } else {
+      await this.app.vault.modify(this.activeFile, updatedContent);
+    }
     new Notice("Images download completed!");
   }
 
@@ -186,13 +192,13 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     let disableModal = false;
     let defaultReferer = "";
     // 优先从文档属性中获取Referer
-    app.fileManager.processFrontMatter(this.activeFile, (frontmatter) => {
+    this.app.fileManager.processFrontMatter(this.activeFile, (frontmatter) => {
       for (const key in frontmatter) {
         if (
           typeof frontmatter[key] === "string" &&
           frontmatter[key].toLowerCase().startsWith("http")
         ) {
-          console.log(
+          console.debug(
             `Found Referer from properties of document. ${key}: ${frontmatter[key]}`
           );
           defaultReferer = frontmatter[key];
