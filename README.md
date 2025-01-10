@@ -1,7 +1,7 @@
 [中文简介](README_CN.md)
 
 # Hotlink Protection Image Downloader
-Obsidian does not have an official clipping plugin. For websites with anti-leech protection, such as ShaoNv Pai, images from web pages copied into articles cannot be displayed. Additionally, I have seen many users' "image beds" suddenly enabling anti-leech, causing existing notes to be unreadable. Therefore, this plugin was born. Although I have never written an Obsidian plugin before and am not very familiar with JavaScript, I managed to write this plugin with the help of large language models and some pieced-together knowledge.
+For websites with anti-leech protection, such as ShaoNv Pai, images from web pages copied into articles cannot be displayed. Additionally, I have seen many users' "image beds" suddenly enabling anti-leech, causing existing notes to be unreadable. Therefore, this plugin was born. Although I have never written an Obsidian plugin before and am not very familiar with JavaScript, I managed to write this plugin with the help of large language models and some pieced-together knowledge.
 
 ## What is it for
 The functionality is very simple. It identifies URLs in the note or allows the user to manually input a URL as the Referer, downloads the image to the local machine, and then replaces the image link with the local image path. The downloaded images will be saved in Obsidian's default attachment folder, just like directly copying images from a web page and pasting them in.
