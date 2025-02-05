@@ -1,12 +1,4 @@
-const {
-  Plugin,
-  Modal,
-  Notice,
-  PluginSettingTab,
-  Setting,
-  FileSystemAdapter,
-  MarkdownView,
-} = require("obsidian");
+const { Plugin, Modal, Notice, PluginSettingTab, Setting, MarkdownView } = require("obsidian");
 const https = require("https");
 const path = require("path");
 
@@ -20,12 +12,11 @@ class ImageDownloaderSettingTab extends PluginSettingTab {
     const { containerEl } = this;
 
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Image Downloader Settings" });
 
     new Setting(containerEl)
-      .setName("Image Save Directory")
+      .setName("Image save directory")
       .setDesc(
-        "Image save directory is the same as Obsidian's attachment default directory, no need to extra configure"
+        "The directory for saving pictures is the same as Obsidian's attachment directory. There is no need to configure it additionally."
       );
     // .addText((text) =>
     //   text
@@ -40,8 +31,8 @@ class ImageDownloaderSettingTab extends PluginSettingTab {
 }
 
 class DefaultConfig {
-  static assetsDir = "assets";
-  static obsmediadir = "";
+  // static assetsDir = "assets";
+  static obsMediaDir = "";
 }
 
 class RefererModal extends Modal {
@@ -55,7 +46,7 @@ class RefererModal extends Modal {
     const { contentEl } = this;
     contentEl.empty(); // 清空内容
     const label = contentEl.createEl("label", {
-      text: "Please input Referer (URL):",
+      text: "Please input referer(URL):",
     });
     contentEl.createEl("br");
     const input = contentEl.createEl("input", {
@@ -63,9 +54,9 @@ class RefererModal extends Modal {
       id: "referer-input",
       placeholder: "https://example.com/xxx/",
     });
-    input.style.margin = "10px";
-    input.style.marginLeft = "5px";
-    input.style.width = "80%";
+    input.style.margin = "0.6em";
+    input.style.marginLeft = "0";
+    input.style.width = "85%";
     if (this.defaultReferer) {
       input.value = this.defaultReferer; // 设置默认Referer
     }
@@ -74,8 +65,7 @@ class RefererModal extends Modal {
     confirmButton.addEventListener("click", () => {
       const referer = input.value;
       if (!referer) {
-        alert("Referer cannot be empty!");
-        return;
+        new Notice("Referer is empty!");
       }
       this.callback(referer);
       this.close();
@@ -99,9 +89,9 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     await this.loadSettings(); // Ensure settings are loaded
 
     this.addCommand({
-      id: "download-images",
+      id: "download-images-with-referer",
       name: "Download images with referer",
-      callback: () => this.downloadImages(),
+      callback: () => this.processFile(),
     });
 
     this.addSettingTab(new ImageDownloaderSettingTab(this.app, this));
@@ -109,68 +99,46 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
 
   async loadSettings() {
     const data = await this.loadData();
-    this.settings = Object.assign({ assetsDir: DefaultConfig.assetsDir }, data); // 设置默认值
+    // this.settings = Object.assign({ assetsDir: DefaultConfig.assetsDir }, data); // 设置默认值
   }
 
   async saveSettings() {
     await this.saveData(this.settings);
   }
 
-  async downloadWithReferer(referer) {
+  async processFileWithReferer(tFile, referer) {
     let downloadDir = "";
-    if (DefaultConfig.obsmediadir.startsWith(".")) {
+    if (DefaultConfig.obsMediaDir.startsWith(".")) {
       //当前文件所在文件夹(./) + 当前文件所在文件夹下的子文件夹(./assets)
-      downloadDir = path.join(
-        path.dirname(this.app.workspace.getActiveFile().path),
-        DefaultConfig.obsmediadir
-      );
+      downloadDir = path.join(path.dirname(tFile.path), DefaultConfig.obsMediaDir);
     } else {
       // 仓库根目录(/) + 指定的附件文件夹(attachment)
-      downloadDir = DefaultConfig.obsmediadir;
+      downloadDir = DefaultConfig.obsMediaDir;
     }
     const imageUrls = this.extractImageUrls(this.content);
     const downloadedPathsMap = new Map(); // 用于存储下载的文件路径
-    // 检查并创建目录
-    try {
-      await FileSystemAdapter.mkdir(
-        path.join(this.app.vault.adapter.basePath, downloadDir),
-        {
-          recursive: true,
-        }
-      );
-      console.debug(
-        "Download to ",
-        path.join(this.app.vault.adapter.basePath, downloadDir)
-      );
-    } catch (err) {
-      console.error("Directory creation failed:", err);
-      new Notice("Directory creation failed, please check permissions!");
-      return;
-    }
 
     for (const url of imageUrls) {
       try {
-        const fileName = await this.downloadImage(url, downloadDir, referer);
-        downloadedPathsMap.set(
-          url,
-          path.join(DefaultConfig.obsmediadir, fileName).replaceAll("\\", "/")
-        ); // 收集下载的文件路径, 反斜杠替换成斜杠是因为obsidian在markdown中不支持反斜杠
+        const fileName = await this.downloadImage(url, referer);
+        if (fileName) {
+          downloadedPathsMap.set(
+            url,
+            path.join(DefaultConfig.obsMediaDir, fileName).replaceAll("\\", "/")
+          ); // 收集下载的文件路径, 反斜杠替换成斜杠是因为obsidian在markdown中不支持反斜杠
+        }
       } catch (error) {
-        console.error(
-          `Download failed: ${url}, error message: ${error.message}`
-        );
+        console.error(`Download failed: ${url}, error message: ${error.message}`);
         new Notice(
           "Can not download some images. You can retry it, or press Ctrl+Shift+I to view the error log"
         );
       }
     }
 
-    const updatedContent = this.replaceImageUrls(
-      this.content,
-      downloadedPathsMap
-    );
+    const updatedContent = this.replaceImageUrls(this.content, downloadedPathsMap);
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (view && view.editor.hasFocus()) {   // 编辑器打开的情况下不要直接修改文件，否则输入Referer后按回车确认时，会导致文档开头多一个回车
+    if (view && view.editor.hasFocus()) {
+      // 当前文件处于编辑状态时不要直接修改文件，否则输入Referer后按回车确认时，会导致文档开头多一个回车
       view.editor.setValue(updatedContent);
     } else {
       await this.app.vault.modify(this.activeFile, updatedContent);
@@ -178,17 +146,16 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     new Notice("Images download completed!");
   }
 
-  async downloadImages() {
-    DefaultConfig.obsmediadir = this.app.vault.getConfig(
-      "attachmentFolderPath"
-    );
-    console.debug("obsmediadir: ", DefaultConfig.obsmediadir);
+  async processFile() {
+    DefaultConfig.obsMediaDir = this.app.vault.getConfig("attachmentFolderPath");
+    console.debug("obsMediaDir: ", DefaultConfig.obsMediaDir);
 
     this.activeFile = this.app.workspace.getActiveFile();
     if (!this.activeFile) {
       new Notice("You haven't open a document!");
       return;
     }
+    new Notice(`Processing file: ${this.activeFile.name}`);
     let disableModal = false;
     let defaultReferer = "";
     // 优先从文档属性中获取Referer
@@ -196,11 +163,11 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
       for (const key in frontmatter) {
         if (
           typeof frontmatter[key] === "string" &&
-          frontmatter[key].toLowerCase().startsWith("http")
+          (frontmatter[key].toLowerCase().startsWith("http://") ||
+            frontmatter[key].toLowerCase().startsWith("https://"))
         ) {
-          console.debug(
-            `Found Referer from properties of document. ${key}: ${frontmatter[key]}`
-          );
+          console.debug(`Found Referer from properties of document. ${key}: ${frontmatter[key]}`);
+          new Notice(`Found Referer from properties of document. ${key}: ${frontmatter[key]}`);
           defaultReferer = frontmatter[key];
           disableModal = true;
         }
@@ -224,12 +191,12 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
 
     if (!disableModal) {
       const modal = new RefererModal(app, async (referer) => {
-        await this.downloadWithReferer(referer);
+        await this.processFileWithReferer(this.activeFile, referer);
       });
       // 在弹框中填充默认Referer
       modal.defaultReferer = defaultReferer;
       modal.open();
-    } else this.downloadWithReferer(defaultReferer);
+    } else this.processFileWithReferer(this.activeFile, defaultReferer);
   }
 
   replaceImageUrls(content, downloadedPaths) {
@@ -252,16 +219,19 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
     return urls;
   }
 
-  async downloadImage(url, dirPath, referer) {
+  async downloadImage(url, referer) {
     console.debug("Start downloading image:", url);
     let options = {};
+    options = {
+      headers: {
+        Accept: "*/*",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+      },
+      // rejectUnauthorized: false, //默认情况下不信任安装在“受信任的根证书颁发机构”中的自签名证书，调试时需禁用https证书校验，否则抓包时会出现“self signed certificate in certificate chain”错误
+    };
     if (referer) {
-      options = {
-        headers: {
-          Referer: encodeURI(referer),
-        },
-        // rejectUnauthorized: false    //默认情况下不信任安装在“受信任的根证书颁发机构”中的自签名证书，调试时需禁用https证书校验，否则抓包时会出现“self signed certificate in certificate chain”错误
-      };
+      options.headers.Referer = encodeURI(referer);
     }
 
     return new Promise((resolve, reject) => {
@@ -288,22 +258,14 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
           };
           const type = contentType.split("/")[1];
           if (contentType.split("/")[0] === "text") {
-            new Notice(
-              "Remote resource is not image, please check your Referer."
-            );
+            new Notice("Remote resource is not image, please check your Referer.");
           }
           if (typeMap[type]) {
             extension = typeMap[type];
           } else {
-            console.error(
-              "Unsupported file type:",
-              contentType,
-              "for URL:",
-              url
-            );
-            reject(new Error("Unsupported file type: " + contentType));
+            console.error("Unsupported file type:", contentType, "for URL:", url);
             new Notice("Unsupported file type: " + contentType);
-            return;
+            reject(new Error("Unsupported file type: " + contentType));
           }
 
           response.on("data", (chunk) => {
@@ -316,23 +278,20 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
 
             if (extension !== ".svg" && buffer.length < 1024) {
               console.error(
-                "The image size is too small, it seems that downloaded content is not a image."
+                "The image size is too small, it seems that downloaded content is not an image."
               );
             }
             // 生成随机文件名
             let filePath;
             let fileName;
-            // const fileSystemAdapter = this.vault.adapter
-            do {
-              const timestamp = Math.floor(Date.now() / 1000);
-              const chars = "abcdefghijklmnopqrstuvwxyz0123456789".split("");
-              const randomStr = Array(5)
-                .fill(0)
-                .map(() => chars[Math.floor(Math.random() * chars.length)])
-                .join("");
-              fileName = `${timestamp}_${randomStr}${extension}`;
-              filePath = `${dirPath}/${fileName}`;
-            } while (await this.app.vault.adapter.exists(filePath));
+            const timestamp = Math.floor(Date.now() / 1000);
+            const chars = "abcdefghijkmnpqrstuvwxyz23456789".split("");
+            const randomStr = Array(5)
+              .fill(0)
+              .map(() => chars[Math.floor(Math.random() * chars.length)])
+              .join("");
+            fileName = `${timestamp}_${randomStr}${extension}`;
+            filePath = await this.app.fileManager.getAvailablePathForAttachment(fileName); // 该API会递归创建上级目录并重命名同名文件
             await this.app.vault.createBinary(filePath, buffer);
             resolve(fileName);
           });
