@@ -262,7 +262,10 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
           }
           if (typeMap[type]) {
             extension = typeMap[type];
-          } else {
+          } else if (url.toLowerCase().includes(".webp") && contentType === "application/octet-stream"){
+            extension = ".webp"   // 部分OSS不支持webp格式，比如阿里云
+          }
+          else{
             console.error("Unsupported file type:", contentType, "for URL:", url);
             new Notice("Unsupported file type: " + contentType);
             reject(new Error("Unsupported file type: " + contentType));
