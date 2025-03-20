@@ -130,7 +130,7 @@ module.exports = class ImageDownloaderPlugin extends Plugin {
       } catch (error) {
         console.error(`Download failed: ${url}, error message: ${error.message}`);
         new Notice(
-          "Can not download some images. You can retry it, or press Ctrl+Shift+I to view the error log"
+          "Can not download some images. You can retry it, or press Ctrl + Shift + I to view the error log"
         );
       }
     }
